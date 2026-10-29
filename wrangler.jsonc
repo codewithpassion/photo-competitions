@@ -11,7 +11,7 @@
     {
       "binding": "DB",
       "database_name": "photo-competitions-db",
-      "database_id": "REPLACE_WITH_D1_ID",
+      "database_id": "d9c759b1-caf2-4ebf-a2bf-be6baeb34a75",
       "migrations_dir": "migrations"
     }
   ],
