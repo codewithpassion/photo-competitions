@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "photo-competitions",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-10-01",
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "photo-competitions-db",
+      "database_id": "REPLACE_WITH_D1_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "PHOTOS", "bucket_name": "photo-competitions-photos" }
+  ],
+  // Locally, .dev.vars overrides this with APP_ENV=development (enables dev-login).
+  "vars": { "APP_ENV": "production" }
+}

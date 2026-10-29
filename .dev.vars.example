@@ -1,0 +1,4 @@
+# Copy to .dev.vars for local development (npm run dev does this for you).
+APP_ENV=development
+GOOGLE_CLIENT_ID=dummy-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=dummy-client-secret
