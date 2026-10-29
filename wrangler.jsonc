@@ -18,6 +18,12 @@
   "r2_buckets": [
     { "binding": "PHOTOS", "bucket_name": "photo-competitions-photos" }
   ],
+  // Cloudflare Email Service: sends the sign-in emails.
+  "send_email": [{ "name": "EMAIL" }],
   // Locally, .dev.vars overrides this with APP_ENV=development (enables dev-login).
-  "vars": { "APP_ENV": "production" }
+  "vars": {
+    "APP_ENV": "production",
+    // The sender of sign-in emails. Its domain must be onboarded in Cloudflare Email Service.
+    "EMAIL_FROM": "login@REPLACE_WITH_DOMAIN"
+  }
 }

@@ -21,7 +21,7 @@ app.use('/api/*', async (c, next) => {
   const sid = getCookie(c, 'sid')
   const user = sid
     ? await c.env.DB.prepare(
-        `SELECT u.id, u.google_sub, u.email, u.name, u.picture FROM sessions s JOIN users u ON u.id = s.user_id
+        `SELECT u.id, u.email, u.name, u.picture FROM sessions s JOIN users u ON u.id = s.user_id
          WHERE s.id = ? AND s.expires_at > ?`,
       )
         .bind(sid, nowIso())

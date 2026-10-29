@@ -6,13 +6,25 @@ export interface Env {
   PHOTOS: R2Bucket
   ASSETS: Fetcher
   APP_ENV: string
-  GOOGLE_CLIENT_ID: string
-  GOOGLE_CLIENT_SECRET: string
+  /** Cloudflare Email Service binding (send_email in wrangler.jsonc). */
+  EMAIL: EmailSender
+  /** Address login emails come from; its domain must be onboarded in Cloudflare Email Service. */
+  EMAIL_FROM: string
+}
+
+/** The part of the Email Service Workers binding we use. Errors are thrown as Error with a `code`. */
+export interface EmailSender {
+  send(message: {
+    to: string
+    from: { email: string; name?: string }
+    subject: string
+    html: string
+    text: string
+  }): Promise<{ messageId: string }>
 }
 
 export interface User {
   id: number
-  google_sub: string
   email: string
   name: string
   picture: string | null
@@ -24,7 +36,7 @@ export type Ctx = Context<AppEnv>
 /** An error we want to show the user as `{error: "..."}` with a given HTTP status. */
 export class ApiError extends Error {
   constructor(
-    public status: 400 | 401 | 403 | 404 | 409 | 413,
+    public status: 400 | 401 | 403 | 404 | 409 | 413 | 429 | 502,
     message: string,
   ) {
     super(message)
