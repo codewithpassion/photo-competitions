@@ -24,6 +24,6 @@
   "vars": {
     "APP_ENV": "production",
     // The sender of sign-in emails. Its domain must be onboarded in Cloudflare Email Service.
-    "EMAIL_FROM": "login@REPLACE_WITH_DOMAIN"
+    "EMAIL_FROM": "login@rockyshoreslabs.io"
   }
 }
