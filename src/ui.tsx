@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { api, useMe } from './api'
 import { type Phase, phaseLabel } from './format'
 import type { PhotoSummary } from './types'
@@ -44,11 +44,15 @@ export function SignInPrompt({ what }: { what: string }) {
   )
 }
 
-export const SignInLink = ({ className = 'btn' }: { className?: string }) => (
-  <a className={className} href={`/api/auth/google?return=${encodeURIComponent(location.pathname)}`}>
-    Sign in with Google
-  </a>
-)
+export function SignInLink({ className = 'btn' }: { className?: string }) {
+  const { pathname, search } = useLocation()
+  const back = pathname.startsWith('/login') ? '/' : pathname + search
+  return (
+    <Link className={className} to={`/login?returnTo=${encodeURIComponent(back)}`}>
+      Sign in
+    </Link>
+  )
+}
 
 export function LikeButton({ photo, onChange }: { photo: { id: number; liked_by_me: boolean }; onChange: () => void }) {
   const [busy, setBusy] = useState(false)

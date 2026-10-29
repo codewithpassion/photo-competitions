@@ -38,7 +38,7 @@ export function useLoad<T>(load: () => Promise<T>, deps: unknown[]) {
 interface MeState {
   user: User | null
   loading: boolean
-  refresh: () => void
+  refresh: () => Promise<void>
 }
-export const MeContext = createContext<MeState>({ user: null, loading: true, refresh: () => {} })
+export const MeContext = createContext<MeState>({ user: null, loading: true, refresh: async () => {} })
 export const useMe = () => useContext(MeContext)

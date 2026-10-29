@@ -15,18 +15,31 @@ Real hosted web app. Owner is non-technical. Keep code simple, readable, small d
 - wrangler.jsonc: name `photo-competitions`, D1 database_name `photo-competitions-db`
   (database_id placeholder `REPLACE_WITH_D1_ID`), R2 bucket `photo-competitions-photos`.
   vars: `APP_ENV` ("development" locally via .dev.vars, "production" in wrangler.jsonc).
-  Secrets: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET. Put local dummy values in `.dev.vars.example`.
+  `EMAIL_FROM` (sender address of sign-in emails, placeholder `login@REPLACE_WITH_DOMAIN`), and the
+  Cloudflare Email Service binding `"send_email": [{ "name": "EMAIL" }]`. No secrets are needed.
+  `.dev.vars.example` holds `APP_ENV=development`.
 
 ## Auth
-- Google sign-in only, hand-rolled OAuth 2.0 authorization code flow (no auth library):
-  `GET /api/auth/google` -> redirect to Google (scope `openid email profile`, random `state`
-  in a short-lived HttpOnly cookie). `GET /api/auth/google/callback` -> verify state, exchange code,
-  read the id_token payload from the token endpoint response (trusted, came over TLS from Google),
-  require email_verified, upsert user by google `sub`, create session row (random 32-byte id,
-  30-day expiry), set cookie `sid` HttpOnly Secure SameSite=Lax Path=/. Redirect URI is
-  `${origin}/api/auth/google/callback` derived from the request URL.
+- Passwordless email sign-in only (no passwords, no third-party identity provider, no auth library).
+  The user enters an email and receives ONE email with a 6-digit code and a "Sign in" button (magic link).
+  - `POST /api/auth/email/start {email, returnTo?}`: email trimmed + lowercased; creates a `login_codes` row
+    (6-digit code from `crypto.getRandomValues`, uniform; 32-byte random link token; only SHA-256 hashes stored;
+    expires after 15 minutes; `return_to` must be a same-site path). Max 5 starts per email per hour (429).
+    Starting a new code retires older unused ones. The response is the same whether or not the email has an
+    account (accounts are created on first successful sign-in). The email is sent with the Cloudflare Email
+    Service Workers binding `env.EMAIL.send({ to, from: { email: env.EMAIL_FROM, name }, subject, html, text })`;
+    failures are logged with `console.error` (including the error `code`) and returned as a plain-words 502.
+    With `APP_ENV=development` nothing is sent: the response contains `{ devCode, devToken }` (also logged).
+  - `POST /api/auth/email/verify {email, code}`: constant-time hash compare against the newest unused,
+    unexpired code; after 5 wrong attempts that code is burned; single use.
+  - `POST /api/auth/email/verify-link {token}`: same checks for the link token. The link opens the SPA route
+    `/login/verify?token=...&email=...`, which POSTs the token, so mail scanners that GET the link don't use it up.
+  - On success: upsert the user by email, create the session row (random 32-byte id, 30-day expiry), set cookie
+    `sid` HttpOnly Secure SameSite=Lax Path=/, return `{ user, returnTo }`.
+  - New accounts have an empty `name`; the SPA shows "What should we call you?" before anything else.
+    `PATCH /api/me {name}` sets it; users can also change it on `/my`.
 - `POST /api/auth/logout`, `GET /api/me`.
-- DEV ONLY: `POST /api/auth/dev-login {email,name}` creates/logs in a user. Must return 404 unless
+- DEV ONLY: `POST /api/auth/dev-login {email,name}` creates/logs in a user (by email). Must return 404 unless
   `APP_ENV === "development"`. This exists purely for local testing.
 - All state-changing endpoints require a session and a JSON content-type or multipart (CSRF:
   check `Origin` header matches request host for non-GET requests).
@@ -84,6 +97,8 @@ Real hosted web app. Owner is non-technical. Keep code simple, readable, small d
   and comments. Voting, commenting, applying, uploading need sign-in.
 
 ## Pages (keep it clean, mobile-friendly, photo-first; neutral dark-on-light design)
+- `/login` sign-in: email field, then "We've emailed you a 6-digit code" with a 6-digit input
+  (`autocomplete=one-time-code`, numeric), resend, and "use a different email". `/login/verify` is the magic-link page.
 - `/` list of published competitions (open now / upcoming / closed), "Create competition" button.
 - `/my` my competitions (as admin, incl. drafts) and competitions I entered.
 - `/c/new`, `/c/:id/edit` competition form incl. categories editor, publish/unpublish button.
@@ -96,7 +111,7 @@ Real hosted web app. Owner is non-technical. Keep code simple, readable, small d
 - `/p/:id` photo page: large image, title, photographer, date taken, location (with
   "open in map" link to https://www.openstreetmap.org/?mlat=..&mlon=.. when coords exist),
   like button, comments.
-- Header: app name "Photo Competitions", sign in with Google button / user menu with sign out.
+- Header: app name "Photo Competitions", "Sign in" link (to `/login?returnTo=<current path>`) / user menu with sign out.
 
 ## Quality
 - Validate all inputs server-side (zod is fine). Return JSON errors `{error: "..."}` with sensible
@@ -104,7 +119,7 @@ Real hosted web app. Owner is non-technical. Keep code simple, readable, small d
 - Use prepared statements only. Check authorisation on every endpoint (admin = competition owner).
 - `npm run build`, `npm run typecheck` must pass. Add `npm run db:migrate:local`.
 - Tests: an end-to-end Playwright test (`tests/e2e.spec.ts`, run against `npm run dev` or
-  `vite preview`/wrangler dev) using dev-login with two/three users covering: create competition
+  `vite preview`/wrangler dev) using dev-login with two/three users (a second spec, `tests/email-login.spec.ts`, covers the email sign-in flow via `devCode`/`devToken`) covering: create competition
   with 2 categories and limits, publish, user B applies, admin approves, B uploads photos (generate
   test JPEGs with EXIF in a fixture, e.g. with `piexifjs` or a committed small fixture made via
   sharp in a script), limits enforced, C likes and comments, counts hidden, admin hides a photo,

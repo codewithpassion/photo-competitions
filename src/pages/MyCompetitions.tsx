@@ -1,3 +1,4 @@
+import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router'
 import { api, useLoad, useMe } from '../api'
 import { fmtDateTime, phaseOf } from '../format'
@@ -35,6 +36,39 @@ function List({ items, empty }: { items: Item[]; empty: string }) {
   )
 }
 
+function NameForm() {
+  const { user, refresh } = useMe()
+  const [name, setName] = useState(user?.name ?? '')
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    setMessage(null)
+    setError(null)
+    try {
+      await api('/me', 'PATCH', { name })
+      await refresh()
+      setMessage('Saved.')
+    } catch (err) {
+      setError((err as Error).message)
+    }
+  }
+  return (
+    <form onSubmit={save} className="card space-y-2">
+      <label className="label" htmlFor="display-name">
+        Your name (shown with your photos and comments)
+      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <input id="display-name" className="input max-w-xs" required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} />
+        <button className="btn-secondary">Save name</button>
+        {message && <span className="text-sm text-green-700">{message}</span>}
+      </div>
+      <ErrorBox message={error} />
+      <p className="text-xs text-stone-500">Signed in as {user?.email}</p>
+    </form>
+  )
+}
+
 export default function MyCompetitions() {
   const { user, loading } = useMe()
   const { data, error } = useLoad(() => (user ? api<{ admin: Item[]; entered: Item[] }>('/my') : Promise.resolve(null)), [user?.id])
@@ -43,6 +77,7 @@ export default function MyCompetitions() {
   return (
     <div className="space-y-8">
       <ErrorBox message={error} />
+      <NameForm />
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Competitions I run</h1>

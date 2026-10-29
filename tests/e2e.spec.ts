@@ -92,7 +92,7 @@ test('full competition lifecycle', async ({ browser }) => {
   // Published competitions are public, with line breaks kept.
   await anonPage.goto(`/c/${compId}`)
   await expect(anonPage.getByText('Line two')).toBeVisible()
-  await expect(anonPage.getByRole('link', { name: 'Sign in with Google' }).first()).toBeVisible()
+  await expect(anonPage.getByRole('link', { name: 'Sign in' }).first()).toBeVisible()
 
   // ---- 2. B applies; can't upload until approved.
   const B = await signIn(browser, 'Bob')

@@ -10,23 +10,33 @@ import CompetitionPage from './pages/CompetitionPage'
 import UploadPage from './pages/UploadPage'
 import AdminPage from './pages/AdminPage'
 import PhotoPage from './pages/PhotoPage'
+import LoginPage, { NameStep, VerifyLinkPage } from './pages/LoginPage'
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const refresh = useCallback(() => {
-    api<{ user: User | null }>('/me')
-      .then((r) => setUser(r.user))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false))
-  }, [])
-  useEffect(refresh, [refresh])
+  const refresh = useCallback(
+    () =>
+      api<{ user: User | null }>('/me')
+        .then((r) => setUser(r.user))
+        .catch(() => setUser(null))
+        .finally(() => setLoading(false)),
+    [],
+  )
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
 
   return (
     <MeContext.Provider value={{ user, loading, refresh }}>
       <Header />
       <main className="mx-auto max-w-5xl px-4 py-6">
+        {user && !user.name.trim() ? (
+          <NameStep />
+        ) : (
         <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login/verify" element={<VerifyLinkPage />} />
           <Route path="/" element={<Home />} />
           <Route path="/my" element={<MyCompetitions />} />
           <Route path="/c/new" element={<CompetitionForm />} />
@@ -37,6 +47,7 @@ export default function App() {
           <Route path="/p/:id" element={<PhotoPage />} />
           <Route path="*" element={<p className="py-8 text-center">Page not found.</p>} />
         </Routes>
+        )}
       </main>
     </MeContext.Provider>
   )
@@ -62,7 +73,7 @@ function Header() {
                 className="btn-secondary"
                 onClick={async () => {
                   await api('/auth/logout', 'POST')
-                  refresh()
+                  await refresh()
                   navigate('/')
                 }}
               >
@@ -83,8 +94,8 @@ function Header() {
   )
 }
 
-/** Local development only: sign in without Google. Not included in production builds. */
-function DevLogin({ onDone }: { onDone: () => void }) {
+/** Local development only: sign in without an email code. Not included in production builds. */
+function DevLogin({ onDone }: { onDone: () => Promise<void> }) {
   const [email, setEmail] = useState('dev@example.com')
   async function submit(e: FormEvent) {
     e.preventDefault()

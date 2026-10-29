@@ -1,6 +1,6 @@
 # Puts the app live on Cloudflare every time code lands on main.
 # Needs repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
-# Optional secrets GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET enable Google sign-in.
+# Sign-in emails need EMAIL_FROM in wrangler.jsonc to be set to an address on a domain onboarded in Cloudflare Email Service.
 name: Deploy
 
 on:
@@ -52,14 +52,3 @@ jobs:
       - name: Build and deploy
         if: steps.check.outputs.skip != 'true'
         run: npm run deploy
-
-      - name: Set Google sign-in secrets
-        if: steps.check.outputs.skip != 'true'
-        env:
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-        if: steps.check.outputs.skip != 'true' && env.GOOGLE_CLIENT_ID != ''
-        run: |
-          node -e 'process.stdout.write(JSON.stringify({GOOGLE_CLIENT_ID:process.env.GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET:process.env.GOOGLE_CLIENT_SECRET}))' > /tmp/secrets.json
-          npx wrangler secret bulk /tmp/secrets.json
-          rm /tmp/secrets.json
